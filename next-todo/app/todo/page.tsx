@@ -3,7 +3,7 @@ import TodoTable from '@/components/todo-table';
 
 async function fetchTodoApiCall() {
   const url = process.env.BASE_URL + 'todo';
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: 'no-store' });
 
   return res.json();
 }

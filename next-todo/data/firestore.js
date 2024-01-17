@@ -10,6 +10,8 @@ import {
   updateDoc,
   doc,
   Timestamp,
+  query,
+  orderBy,
 } from 'firebase/firestore';
 
 // Your web app's Firebase configuration
@@ -29,7 +31,10 @@ const db = getFirestore(app);
 
 //모든 todo 가져오기
 export async function fetchTodo() {
-  const querySnapshot = await getDocs(collection(db, 'todo'));
+  const todoRef = collection(db, 'todo');
+  const q = query(todoRef, orderBy('created_at', 'desc'));
+
+  const querySnapshot = await getDocs(q);
 
   if (querySnapshot.empty) {
     return [];

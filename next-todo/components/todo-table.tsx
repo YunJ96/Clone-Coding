@@ -22,14 +22,12 @@ import {
   DropdownItem,
   Modal,
   ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   useDisclosure,
 } from '@nextui-org/react';
 import { VerticalDotsIcon } from '@/components/icons';
 import { CustomModalType, FocusedTodoType, Todo } from '@/types';
 import { useRouter } from 'next/navigation';
+import CustomModal from './custom-modal';
 
 export default function TodoTable({ todo }: { todo: Todo[] }) {
   const [newTodoInput, setNewTodoInput] = useState('');
@@ -59,13 +57,22 @@ export default function TodoTable({ todo }: { todo: Todo[] }) {
     );
   };
 
+  const applyIsDoneUI = (isCompleted: boolean) =>
+    isCompleted ? 'line-through text-gray900/50 dark: text-white-900/50' : '';
+
   const TodoRow = (todo: Todo) => {
     return (
       <TableRow key={todo.id}>
-        <TableCell>{todo.id.slice(0, 3)}</TableCell>
-        <TableCell>{todo.title}</TableCell>
+        <TableCell className={applyIsDoneUI(todo.isCompleted)}>
+          {todo.id.slice(0, 3)}
+        </TableCell>
+        <TableCell className={applyIsDoneUI(todo.isCompleted)}>
+          {todo.title}
+        </TableCell>
         <TableCell>{todo.isCompleted ? '✔' : ''}</TableCell>
-        <TableCell>{`${todo.created_at}`}</TableCell>
+        <TableCell
+          className={applyIsDoneUI(todo.isCompleted)}
+        >{`${todo.created_at}`}</TableCell>
         <TableCell>
           <div className='relative flex justify-end items-center gap-2'>
             <Dropdown>
@@ -94,7 +101,7 @@ export default function TodoTable({ todo }: { todo: Todo[] }) {
     );
   };
 
-  const notify = () => toast.success('새로운 할일이 추가되었습니다.');
+  const notify = (message: string) => toast.success(message);
 
   const addATodoHandler = async () => {
     const url = process.env.NEXT_PUBLIC_BASE_URL + 'todo';
@@ -118,37 +125,69 @@ export default function TodoTable({ todo }: { todo: Todo[] }) {
     setNewTodoInput('');
     router.refresh();
     setIsLoading(false);
-    notify();
+    notify('할 일을 추가하였습니다.');
     console.log('할일 추가완료', newTodoInput);
   };
 
+  const updateATodoHandler = async (
+    id: string,
+    title: string,
+    isCompleted: boolean
+  ) => {
+    const url = process.env.NEXT_PUBLIC_BASE_URL + `todo/${id}`;
+
+    await new Promise((f) => setTimeout(f, 600));
+    await fetch(url, {
+      method: 'post',
+      body: JSON.stringify({
+        title: title,
+        isCompleted: isCompleted,
+      }),
+      cache: 'no-store',
+    });
+
+    router.refresh();
+    notify('할 일을 수정하였습니다.');
+    console.log('할일 수정완료', title);
+  };
+
+  const deleteATodoHandler = async (id: string) => {
+    const url = process.env.NEXT_PUBLIC_BASE_URL + `todo/${id}`;
+
+    await new Promise((f) => setTimeout(f, 600));
+    await fetch(url, {
+      method: 'delete',
+      cache: 'no-store',
+    });
+
+    router.refresh();
+    notify('할 일을 삭제하였습니다.');
+    console.log('할일 삭제 완료');
+  };
+
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
+
   const ModalComponent = () => {
     return (
       <Modal isOpen={isOpen} onOpenChange={onOpenChange} backdrop='blur'>
         <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader className='flex flex-col gap-1'>
-                Modal Title
-              </ModalHeader>
-              <ModalBody>
-                <p>
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                  Nullam pulvinar risus non risus hendrerit venenatis.
-                  Pellentesque sit amet hendrerit risus, sed porttitor quam.
-                </p>
-              </ModalBody>
-              <ModalFooter>
-                <Button color='danger' variant='light' onPress={onClose}>
-                  Close
-                </Button>
-                <Button color='primary' onPress={onClose}>
-                  Action
-                </Button>
-              </ModalFooter>
-            </>
-          )}
+          {(onClose) =>
+            currentModal.focusedTodo && (
+              <CustomModal
+                focusedTodo={currentModal.focusedTodo}
+                modalType={currentModal.modalType}
+                onClose={onClose}
+                onUpdate={async (id, title, isCompleted) => {
+                  await updateATodoHandler(id, title, isCompleted);
+                  onClose();
+                }}
+                onDelete={async (id) => {
+                  await deleteATodoHandler(id);
+                  onClose();
+                }}
+              />
+            )
+          }
         </ModalContent>
       </Modal>
     );
